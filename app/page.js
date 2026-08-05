@@ -140,8 +140,9 @@ export default function AnalyzePage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Basic Header Placeholder */}
       <header className="bg-white border-b border-gray-200 py-4 px-6 shadow-sm">
-        <div className="container mx-auto font-bold text-xl text-green-700 tracking-tight">TruthPill</div>
-      </header>
+    <div className="container mx-auto">
+        <img src="/truthpill-logo.png" alt="TruthPill Logo" className="h-10 w-auto" />
+  </div>      </header>
 
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
