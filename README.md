@@ -1,36 +1,195 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# TruthPill
 
-## Getting Started
+TruthPill is a medicine-package inspection platform that helps users compare visible medicine details against registration information in the NAFDAC Greenbook.
 
-First, run the development server:
+The goal is to make medicine information easier to inspect and help users identify inconsistencies that may require further investigation.
+
+**Note:** TruthPill provides supporting evidence. It does not guarantee that a medicine is genuine.
+
+## Features
+
+- Upload medicine-package images for inspection.
+- Extract visible medicine details using a vision model.
+- Compare NAFDAC registration numbers against Greenbook records.
+- Compare medicine names and manufacturer details.
+- Display registration information where available.
+- Identify possible packaging anomalies.
+- Generate a TruthScore and an evidence report.
+- Validate image files before sending them for inspection.
+
+## Technology Stack
+
+- Next.js
+- React
+- Tailwind CSS
+- Supabase and PostgreSQL
+- Groq API
+- Qwen vision model
+
+## How It Works
+
+1. A user uploads a medicine-package image.
+2. The application validates the image format and size.
+3. The backend sends the image to the Groq vision API.
+4. The model extracts visible information and classifies the image.
+5. The backend searches the `greenbook_medicines` table using the extracted NAFDAC number.
+6. Available medicine details are compared with the registry record.
+7. TruthPill generates a score and supporting evidence.
+8. The frontend displays the inspection report.
+
+## Project Structure
+
+```text
+truthpill/
+├── app/
+│   ├── api/
+│   │   └── route.js
+│   ├── page.js
+│   ├── layout.js
+│   └── globals.css
+├── lib/
+│   └── supabase.js
+├── public/
+├── .env.example
+├── .gitignore
+├── package.json
+└── README.md
+```
+
+## Requirements
+
+- Node.js
+- npm
+- A Supabase project
+- A Groq API key
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Yusufabdulmuiz/truthpill-capstone
+cd truthpill
+npm install
+```
+
+Create a `.env.local` file in the project root.
+
+Configure the following environment variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_server_side_secret
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=your_configured_vision_model
+```
+
+If the application uses additional Groq API keys, configure them as required by the backend.
+
+Never commit `.env.local` or expose server-side secrets in client-side code.
+
+## Running Locally
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+To build the application for production:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Database
 
-To learn more about Next.js, take a look at the following resources:
+TruthPill uses Supabase PostgreSQL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The medicine registry table is:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`greenbook_medicines`
 
-## Deploy on Vercel
+The table includes fields such as:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `id`
+- `product_name`
+- `nafdac_number`
+- `nafdac_number_normalized`
+- `active_ingredients`
+- `strengths`
+- `dosage_form`
+- `routes`
+- `manufacturer`
+- `registration_status`
+- `registration_date`
+- `registration_expiry_date`
+- `composition`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The inspection API uses the normalized NAFDAC number to search for a matching record.
+
+Batch numbers and medicine-package expiry dates are extracted from the image when visible. They are not verified against Greenbook unless an appropriate source is available.
+
+Registration expiry and package expiry are different fields.
+
+## API Endpoint
+
+### `POST /api`
+
+The inspection endpoint accepts a Base64-encoded image.
+
+Example request:
+
+```json
+{
+  "image": "BASE64_ENCODED_IMAGE"
+}
+```
+
+A successful response includes:
+
+- `truthScore`
+- `overallStatus`
+- `inspectionConfidence`
+- `scoreBreakdown`
+- `evidenceList`
+- `extracted`
+- `medicine`
+
+The endpoint returns an error response when validation, image extraction, or registry lookup fails.
+
+## Security
+
+- Keep API keys and server-side secrets private.
+- Validate uploaded files on the server.
+- Configure appropriate Supabase permissions.
+- Apply Row Level Security where applicable.
+- Avoid logging API keys or sensitive information.
+
+## Limitations
+
+- Vision models may extract incorrect or incomplete information.
+- A registry match does not prove that a physical medicine package is genuine.
+- Packaging anomalies are observations, not definitive proof of falsification.
+- Registry coverage and freshness depend on the available source data.
+- Batch numbers and package expiry dates require separate verification when the registry does not contain them.
+
+Consult a licensed pharmacist or the appropriate regulatory authority if a medicine is suspected to be falsified.
+
+## Deployment
+
+Deploy the application to a compatible Next.js hosting platform.
+
+Configure the required environment variables in the hosting dashboard and test the inspection flow after deployment.
+
+## Project Links
+
+- Live application: https://truthpill-capstone.vercel.app/
+- GitHub repository: https://github.com/Yusufabdulmuiz/truthpill-capstone
+
+## Disclaimer
+
+TruthPill is an informational inspection tool. Its scores and findings do not guarantee the authenticity, safety, or quality of a medicine.
