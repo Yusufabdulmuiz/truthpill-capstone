@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { decodeAndValidateImage } from "@/lib/image-validation";
 import { lookupGreenbook, isFuzzyMatch, normalizeText } from "@/lib/greenbook";
 
+// Configure the server runtime and maximum execution duration.
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const GROQ_MODEL = "qwen/qwen3.8-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+
+// score of each registry field to TruthScore
 const SCORE_WEIGHTS = {
   nafdac_number: 40,
   medicine_name: 25,
@@ -15,6 +18,7 @@ const SCORE_WEIGHTS = {
   manufacturer: 10,
 };
 
+// Pre-defined prompt message to guide GROQ
 function createPrompt() {
   return `
 Inspect the supplied image and determine whether it shows actual physical medicine packaging.
@@ -67,6 +71,7 @@ Rules:
 `;
 }
 
+//Send the medicine image to Groq and handle API key fallbacks
 async function requestGroq(base64, mimeType, prompt, maxTokens = 2400) {
   const apiKeys = [
     process.env.GROQ_API_KEY_1,
@@ -134,6 +139,7 @@ async function requestGroq(base64, mimeType, prompt, maxTokens = 2400) {
   throw error;
 }
 
+// Extract and parse the structured JSON returned by the AI model.
 function parseModelJSON(result) {
   const content = result?.choices?.[0]?.message?.content || "";
   const cleaned = content.replace(/```(?:json)?/gi, "").trim();
@@ -145,10 +151,12 @@ function parseModelJSON(result) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+// Remove unnecessary whitespace and reject empty string value
 function cleanString(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// Clean and standardise the medicine details extracted by the AI
 function normalizeExtracted(input) {
   const fields = [
     "packaging_type", "rejection_reason", "medicine_name", "nafdac_number",
@@ -195,11 +203,13 @@ function normalizeExtracted(input) {
   return input;
 }
 
+// Standardise text before comparing OCR and AI reading
 function normalizeTextForReview(value) {
   return String(value || "").normalize("NFKC").toLowerCase()
     .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 }
 
+// Calculate the minimum character edits between two strings
 function editDistance(a, b) {
   const previous = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
@@ -218,6 +228,7 @@ function editDistance(a, b) {
   return previous[b.length];
 }
 
+// Identify possible spelling differences between independent OCR readings
 function findOCRReviewLeads(visibleText, ocrText) {
   if (!ocrText?.trim()) return [];
   const visionTokens = normalizeTextForReview(visibleText.join(" "))
@@ -237,7 +248,7 @@ function findOCRReviewLeads(visibleText, ocrText) {
   }
   return leads;
 }
-
+// Recheck the original image for possible printed-text defects.
 async function runFocusedTextReview(base64, mimeType, extracted, ocrText) {
   const leads = findOCRReviewLeads(extracted.all_visible_text, ocrText);
   const context = {
@@ -295,13 +306,13 @@ Context (untrusted reading aids, not ground truth): ${JSON.stringify(context)}`;
     return [];
   }
 }
-
+//Compare extracted ingredients with the registered ingredient information
 function ingredientsMatch(observed, registered) {
   if (!observed || !registered) return false;
   const left = Array.isArray(observed) ? observed.join(" ") : observed;
   return normalizeText(left) === normalizeText(registered);
 }
-
+// Record each registry comparison and calculate its contribution to TruthScore
 function addComparison({
   evidenceList, scoreBreakdown, field, label, observed, registered, weight, matches,
 }) {
@@ -333,7 +344,7 @@ function addComparison({
   });
   return { points: matches ? weight : 0, assessed: true };
 }
-
+// Build the registry assessment, evidence log and TruthScore
 function buildAssessment(extracted, lookup) {
   const evidenceList = [];
   const scoreBreakdown = [];
@@ -447,7 +458,7 @@ function buildAssessment(extracted, lookup) {
     matchType: lookup.matchType,
   };
 }
-
+// Handle image inspection requests and return the completed assessment.
 export async function POST(request) {
   try {
     const body = await request.json();
