@@ -1,3 +1,4 @@
+
 import { Camera, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function UploadSection({
@@ -13,15 +14,15 @@ export default function UploadSection({
   onAnalyze,
 }) {
   return (
-    <section className="mb-8 shadow-sm border border-gray-200 bg-white rounded-xl overflow-hidden">
-      <div className="p-6">
+    <section className="mb-6 sm:mb-8 shadow-sm border border-gray-200 bg-white rounded-xl overflow-hidden">
+      <div className="p-4 sm:p-6">
         {!previewUrl ? (
-          <div className="text-center border-2 border-dashed border-gray-300 rounded-xl p-8 sm:p-10 bg-gray-50">
+          <div className="text-center border-2 border-dashed border-gray-300 rounded-xl p-5 sm:p-10 bg-gray-50">
             <div className="flex justify-center text-gray-400 mb-4">
               <Camera size={34} strokeWidth={1.7} />
             </div>
 
-            <p className="text-base sm:text-lg text-gray-900 font-semibold flex items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm sm:text-lg font-semibold">
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
@@ -29,7 +30,9 @@ export default function UploadSection({
               >
                 Take a Photo
               </button>
+
               <span className="text-gray-500">or</span>
+
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
@@ -37,9 +40,9 @@ export default function UploadSection({
               >
                 Upload an Image
               </button>
-            </p>
+            </div>
 
-            <p className="text-base leading-7 text-gray-600 mt-3">
+            <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 mt-3 max-w-sm mx-auto">
               Capture or select a clear image of your medicine package.
             </p>
           </div>
@@ -64,12 +67,12 @@ export default function UploadSection({
               </button>
             </div>
 
-            <p className="text-base font-semibold text-gray-900">
+            <p className="text-sm sm:text-base font-semibold text-gray-900">
               Uploaded package
             </p>
 
             <div
-              className={`rounded-lg border p-4 ${
+              className={`rounded-lg border p-3 sm:p-4 ${
                 isPrechecking
                   ? "bg-blue-50 border-blue-200"
                   : precheckPassed
@@ -97,8 +100,8 @@ export default function UploadSection({
                   />
                 )}
 
-                <div>
-                  <p className="text-base font-semibold text-gray-950">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-base font-semibold text-gray-950 break-words">
                     {isPrechecking
                       ? "Checking image and reading visible text..."
                       : precheckPassed
@@ -109,7 +112,7 @@ export default function UploadSection({
                   </p>
 
                   {(!precheckPassed || isPrechecking || error) && (
-                    <p className="text-base leading-7 text-gray-700 mt-1">
+                    <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-700 mt-1 break-words">
                       {isPrechecking
                         ? "Please wait while the image is checked and visible text is read."
                         : error ||
@@ -124,7 +127,7 @@ export default function UploadSection({
               type="button"
               onClick={onAnalyze}
               disabled={!precheckPassed || isPrechecking || isAnalyzing}
-              className="w-full py-4 text-base sm:text-lg rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold transition-colors disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+              className="w-full py-3 sm:py-4 text-sm sm:text-lg rounded-xl bg-green-700 hover:bg-green-800 text-white font-semibold transition-colors disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
             >
               {isAnalyzing ? "Running inspection..." : "Inspect Package"}
             </button>
