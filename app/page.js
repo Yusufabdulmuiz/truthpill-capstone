@@ -65,7 +65,15 @@ function compressImage(file) {
         }
 
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.75));
+
+        const compressedImage = canvas.toDataURL("image/jpeg", 0.75);
+
+        if (!compressedImage.startsWith("data:image/jpeg;base64,")) {
+          reject(new Error("The image could not be converted to JPEG."));
+          return;
+        }
+
+        resolve(compressedImage);
       } catch {
         reject(new Error("Failed to process this image."));
       }
@@ -79,11 +87,11 @@ function compressImage(file) {
   });
 }
 
-async function extractPreliminaryText(file) {
+async function extractPreliminaryText(imageDataUrl) {
   const worker = await createWorker("eng");
 
   try {
-    const result = await worker.recognize(file);
+    const result = await worker.recognize(imageDataUrl);
     return result.data.text || "";
   } finally {
     await worker.terminate();
@@ -160,7 +168,7 @@ export default function AnalyzePage() {
       return;
     }
 
-    // Show the selected image immediately while OCR runs.
+    // Keep the original image for the user's preview.
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
     }
@@ -172,7 +180,12 @@ export default function AnalyzePage() {
     setIsPrechecking(true);
 
     try {
-      const text = await extractPreliminaryText(file);
+      // Convert the image to JPEG before sending it to OCR.
+      const compressed = await compressImage(file);
+
+      if (currentRun !== precheckRunRef.current) return;
+
+      const text = await extractPreliminaryText(compressed);
 
       if (currentRun !== precheckRunRef.current) return;
 
@@ -187,10 +200,6 @@ export default function AnalyzePage() {
           "We could not identify enough medicine-related text. Please upload a clear photo of the medicine package, showing details such as its dosage, NAFDAC number or packaging information."
         );
       }
-
-      const compressed = await compressImage(file);
-
-      if (currentRun !== precheckRunRef.current) return;
 
       setUploadedImage(compressed);
       setOcrText(text);
@@ -247,7 +256,7 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 py-4 px-6 shadow-sm">
+      <header className="bg-white border-b border-gray-200 py-4 px-4 sm:px-6 shadow-sm">
         <div className="container mx-auto">
           <img
             src="/truthpill-logo.png"
@@ -257,12 +266,13 @@ export default function AnalyzePage() {
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl text-[15px] leading-relaxed text-gray-800">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-950 mb-3">
+      <main className="flex-grow container mx-auto px-4 py-6 sm:py-8 max-w-4xl text-[15px] leading-relaxed text-gray-800">
+        <div className="text-center mb-7 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-gray-950 mb-3">
             Medicine Package Inspection
           </h1>
-          <p className="text-base sm:text-lg leading-7 sm:leading-8 text-gray-700 max-w-2xl mx-auto">
+
+          <p className="text-sm sm:text-lg leading-6 sm:leading-8 text-gray-700 max-w-2xl mx-auto">
             Check visible medicine package details against official NAFDAC
             registry records.
           </p>
