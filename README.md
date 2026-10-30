@@ -1,41 +1,46 @@
 # TruthPill
 
-TruthPill is a medicine-package inspection platform that helps users compare visible medicine details against registration information in the NAFDAC Greenbook.
+TruthPill is a medicine-package inspection platform that compares visible medicine details against registration information in the **NAFDAC Greenbook**.
 
-The goal is to make medicine information easier to inspect and help users identify inconsistencies that may require further investigation.
+It uses image analysis and registry data to highlight information that matches, differs or requires further review.
 
-**Note:** TruthPill provides supporting evidence. It does not guarantee that a medicine is genuine.
+> **Important:** TruthPill provides supporting information. It does not independently authenticate a medicine or guarantee that a medicine is genuine, safe or effective.
 
 ## Features
 
-- Upload medicine-package images for inspection.
-- Extract visible medicine details using a vision model.
+- Upload a medicine-package image using a camera or image gallery.
+- Check images and extract preliminary text using OCR.
+- Extract visible medicine details using an AI vision model.
 - Compare NAFDAC registration numbers against Greenbook records.
-- Compare medicine names and manufacturer details.
-- Display registration information where available.
+- Compare medicine names, manufacturers and active ingredients when available.
+- Highlight possible printed-text concerns for human review.
 - Identify possible packaging anomalies.
-- Generate a TruthScore and an evidence report.
-- Validate image files before sending them for inspection.
+- Generate a TruthScore, comparison coverage and evidence report.
+- Validate image formats and file sizes before inspection.
 
 ## Technology Stack
 
-- Next.js
-- React
-- Tailwind CSS
-- Supabase and PostgreSQL
-- Groq API
-- Qwen vision model
+- **Next.js** – application framework and API routes
+- **React** – user interface
+- **Tailwind CSS** – styling
+- **Supabase / PostgreSQL** – medicine registry data
+- **Groq API** – AI inference
+- **Qwen vision model** – image analysis
+- **Tesseract.js** – preliminary OCR
+- **Lucide React** – interface icons
 
 ## How It Works
 
-1. A user uploads a medicine-package image.
-2. The application validates the image format and size.
-3. The backend sends the image to the Groq vision API.
-4. The model extracts visible information and classifies the image.
-5. The backend searches the `greenbook_medicines` table using the extracted NAFDAC number.
-6. Available medicine details are compared with the registry record.
-7. TruthPill generates a score and supporting evidence.
-8. The frontend displays the inspection report.
+1. The user uploads or captures an image of a medicine package.
+2. The frontend checks the file type and size.
+3. Tesseract.js performs a preliminary OCR check for medicine-related text.
+4. The image is compressed and sent to the inspection API with the OCR text.
+5. The backend validates the image and sends it to the vision model.
+6. The model extracts visible package information and visual observations.
+7. The backend searches the `greenbook_medicines` table, primarily using the extracted NAFDAC number.
+8. Available package details are compared with the registry record.
+9. A focused image review checks possible printed-text concerns.
+10. TruthPill returns the inspection results, evidence and TruthScore for display.
 
 ## Project Structure
 
@@ -44,12 +49,27 @@ truthpill/
 ├── app/
 │   ├── api/
 │   │   └── route.js
+│   ├── components/
+│   │   └── inspection/
+│   │       ├── UploadSection.js
+│   │       ├── ScanGuidelines.js
+│   │       ├── InspectionReport.js
+│   │       ├── ScoreSummary.js
+│   │       ├── EvidenceLog.js
+│   │       ├── RegistryComparison.js
+│   │       ├── FindingsToReview.js
+│   │       └── PackagingAnomalies.js
 │   ├── page.js
 │   ├── layout.js
 │   └── globals.css
 ├── lib/
+│   ├── greenbook.js
+│   ├── image-validation.js
+│   ├── spelling-checks.js
 │   └── supabase.js
 ├── public/
+├── docs/
+│   └── TECHNICAL_DESIGN_DOCUMENT.md
 ├── .env.example
 ├── .gitignore
 ├── package.json
@@ -60,31 +80,27 @@ truthpill/
 
 - Node.js
 - npm
-- A Supabase project
-- A Groq API key
+- A Supabase project containing the medicine registry data
+- A Groq API key and access to the configured vision model
 
 ## Installation
 
-Clone the repository:
-
 ```bash
-git clone https://github.com/Yusufabdulmuiz/truthpill-capstone
-cd truthpill
+git clone https://github.com/Yusufabdulmuiz/truthpill-capstone.git
+cd truthpill-capstone
 npm install
 ```
 
-Create a `.env.local` file in the project root.
-
-Configure the following environment variables:
+Create a `.env.local` file in the project root:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_ROLE_KEY=your_server_side_secret
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=your_configured_vision_model
 ```
 
-If the application uses additional Groq API keys, configure them as required by the backend.
+If the backend uses additional Groq keys for fallback requests, add the corresponding variables using the names expected by `app/api/route.js`.
 
 Never commit `.env.local` or expose server-side secrets in client-side code.
 
@@ -98,7 +114,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-To build the application for production:
+Build and run the production version:
 
 ```bash
 npm run build
@@ -107,89 +123,93 @@ npm run start
 
 ## Database
 
-TruthPill uses Supabase PostgreSQL.
+TruthPill uses Supabase PostgreSQL. The medicine registry table is named:
 
-The medicine registry table is:
+```text
+greenbook_medicines
+```
 
-`greenbook_medicines`
-
-The table includes fields such as:
+The registry integration currently uses fields including:
 
 - `id`
 - `product_name`
 - `nafdac_number`
 - `nafdac_number_normalized`
 - `active_ingredients`
-- `strengths`
-- `dosage_form`
-- `routes`
 - `manufacturer`
-- `registration_status`
-- `registration_date`
-- `registration_expiry_date`
-- `composition`
 
-The inspection API uses the normalized NAFDAC number to search for a matching record.
+The wider dataset may also contain fields such as strength, dosage form, route, composition and registration dates. The fields actually queried by the application are determined by `lib/greenbook.js` and the current database schema.
 
-Batch numbers and medicine-package expiry dates are extracted from the image when visible. They are not verified against Greenbook unless an appropriate source is available.
+An exact NAFDAC registration number match is the primary product identification method. Other fields are assessed separately.
 
-Registration expiry and package expiry are different fields.
+Batch numbers and package expiry dates may be extracted when visible, but are not independently verified against Greenbook unless a separate verification source is available. Package expiry date and registration expiry date are different data points.
 
-## API Endpoint
+## API
 
 ### `POST /api`
 
-The inspection endpoint accepts a Base64-encoded image.
-
-Example request:
+The frontend sends a JSON request containing the image as Base64 data and the preliminary OCR text:
 
 ```json
 {
-  "image": "BASE64_ENCODED_IMAGE"
+  "image": "BASE64_ENCODED_IMAGE",
+  "ocrText": "TEXT_EXTRACTED_FROM_THE_IMAGE"
 }
 ```
 
-A successful response includes:
+A successful response includes inspection information such as:
 
+- `success`
 - `truthScore`
 - `overallStatus`
-- `inspectionConfidence`
+- `comparisonCoverage`
 - `scoreBreakdown`
 - `evidenceList`
 - `extracted`
 - `medicine`
+- `matchType`
 
-The endpoint returns an error response when validation, image extraction, or registry lookup fails.
+The exact response structure is defined by `app/api/route.js`.
+
+## TruthScore
+
+TruthScore represents agreement between visible package details and available registry information for the comparisons that could be assessed.
+
+It is not:
+
+- A probability that a medicine is genuine.
+- A laboratory authenticity result.
+- Proof that a medicine is safe or effective.
+- Independent verification of batch numbers or package expiry dates.
+
+Comparison coverage indicates how much of the applicable registry comparison could be assessed. Information that is not visible or cannot be assessed should not be treated as a confirmed match.
 
 ## Security
 
-- Keep API keys and server-side secrets private.
-- Validate uploaded files on the server.
-- Configure appropriate Supabase permissions.
-- Apply Row Level Security where applicable.
-- Avoid logging API keys or sensitive information.
+- Keep API keys and server-side credentials private.
+- Validate uploaded images on the server.
+- Keep the Supabase service role key out of client-side code.
+- Configure appropriate Supabase access controls and Row Level Security where applicable.
+- Do not log credentials or unnecessary sensitive information.
 
 ## Limitations
 
-- Vision models may extract incorrect or incomplete information.
-- A registry match does not prove that a physical medicine package is genuine.
-- Packaging anomalies are observations, not definitive proof of falsification.
+- OCR and vision models may produce incorrect or incomplete results.
+- Blurry, damaged, obstructed or partially visible packaging can limit inspection.
+- A registry match does not prove that an individual package is genuine.
+- A medicine-name match alone does not establish an exact registry identity.
+- Printed-text concerns and packaging anomalies require human confirmation.
 - Registry coverage and freshness depend on the available source data.
 - Batch numbers and package expiry dates require separate verification when the registry does not contain them.
 
-Consult a licensed pharmacist or the appropriate regulatory authority if a medicine is suspected to be falsified.
-
-## Deployment
-
-Deploy the application to a compatible Next.js hosting platform.
-
-Configure the required environment variables in the hosting dashboard and test the inspection flow after deployment.
+If a medicine is suspected to be falsified, consult a licensed pharmacist or the appropriate regulatory authority.
 
 ## Project Links
 
-- Live application: https://truthpill-capstone.vercel.app/
-- GitHub repository: https://github.com/Yusufabdulmuiz/truthpill-capstone
+- **Live application:** https://truthpill-capstone.vercel.app/
+- **GitHub repository:** https://github.com/Yusufabdulmuiz/truthpill-capstone
+- **Technical Design Document:** [docs/TECHNICAL_DESIGN_DOCUMENT.md](docs/TECHNICAL_DESIGN_DOCUMENT.md)
 
 ## Disclaimer
 
-TruthPill is an informational inspection tool. Its scores and findings do not guarantee the authenticity, safety, or quality of a medicine.
+TruthPill is an informational medicine-package inspection tool. Its scores, registry comparisons and visual findings provide supporting information for further investigation. They do not guarantee the authenticity, safety, quality or effectiveness of any medicine and do not replace laboratory testing, professional pharmaceutical assessment or regulatory verification.
