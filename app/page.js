@@ -24,6 +24,8 @@ function hasMedicineCues(text) {
   return cueGroups.filter((pattern) => pattern.test(value)).length >= 2;
 }
 
+// Resize and compress the image before OCR processing
+
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -86,6 +88,8 @@ function compressImage(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// Extract preliminary text from the processed image
 
 async function extractPreliminaryText(imageDataUrl) {
   const worker = await createWorker("eng");
@@ -168,7 +172,7 @@ export default function AnalyzePage() {
       return;
     }
 
-    // Keep the original image for the user's preview.
+    // To keep the original image for the user's preview
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
     }
@@ -228,7 +232,7 @@ export default function AnalyzePage() {
 
     try {
       const base64Data = uploadedImage.split(",")[1];
-
+// To send the image and preliminary OCR text to the backend
       const response = await fetch("/api", {
         method: "POST",
         headers: {
@@ -245,7 +249,7 @@ export default function AnalyzePage() {
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Inspection failed.");
       }
-
+// Update the page with the inspection report returned by the backend
       setReport(data);
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
